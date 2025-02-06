@@ -1024,6 +1024,7 @@ name = "copy-traing-bot-rust"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.13.1",
  "chrono",
  "clap 4.5.28",
  "dotenv",
