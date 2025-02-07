@@ -28,3 +28,7 @@ spl-associated-token-account = { version = "6.0.0", features = [
 ] }
 spl-token-client = "0.13.0"
 base64 = "0.13"
+indicatif = "0.17.8"
+rand = "0.8.5"
+borsh = { version = "1.5.3" }
+borsh-derive = "1.5.3"
