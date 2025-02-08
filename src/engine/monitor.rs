@@ -44,6 +44,7 @@ pub async fn monitor(yellowstone_grpc_client: String) -> Result<(), String> {
         .await
         .map_err(|e| format!("Failed to connect: {}", e))?;
 
+    println!("monitor!");
     match client.health_check().await {
         Ok(health) => {
             println!("Health check: {:#?}", health.status);
@@ -97,24 +98,26 @@ pub async fn monitor(yellowstone_grpc_client: String) -> Result<(), String> {
                     let entry = messages.entry(tx.slot).or_default();
                     if let Some(transaction) = tx.transaction {
                         if let Ok(signature) = Signature::try_from(transaction.signature.clone()) {
-                            // println!("sig: {:#?}", signature);
+                            println!("sig: {:#?}", signature);
                         }
                         if let Some(trans) = transaction.transaction.clone() {
                             if let Some(message_data) = trans.message {
                                 let signer =
                                     Pubkey::try_from(message_data.account_keys[0].clone()).unwrap();
-                                // println!("signer: {:#?}", signer);
+
                                 if signer == Pubkey::from_str(TARGET).unwrap() {
                                     for account_key in message_data.account_keys.iter() {
                                         if Pubkey::from_str(PUMP_PROGRAM).unwrap()
                                             == Pubkey::try_from(account_key.clone()).unwrap()
                                         {
+                                            println!("signer: {:#?}", signer);
                                             tx_pump(transaction.clone(), signer).await;
                                         }
                                         if Pubkey::from_str(RAYDIUM_PROGRAM).unwrap()
                                             == Pubkey::try_from(account_key.clone()).unwrap()
                                         {
-                                            tx_raydium().await;
+                                            println!("signer: {:#?}", signer);
+                                            tx_raydium(transaction.clone(), signer).await;
                                         }
                                     }
                                 }
@@ -142,6 +145,7 @@ pub async fn tx_pump(transaction: SubscribeUpdateTransactionInfo, target: Pubkey
     let mut dirs = "".to_string();
     let mut bonding_curve = "".to_string();
 
+    println!("punp");
     if let Some(meta) = transaction.meta.clone() {
         for pre_token_balance in meta.pre_token_balances.iter() {
             if pre_token_balance.owner.clone() == target.to_string() {
@@ -200,4 +204,78 @@ pub async fn tx_pump(transaction: SubscribeUpdateTransactionInfo, target: Pubkey
         }
     }
 }
-pub async fn tx_raydium() {}
+pub async fn tx_raydium(transaction: SubscribeUpdateTransactionInfo, target: Pubkey) {
+    let mut amount_in = 0_f64;
+    let mut mint = "".to_string();
+    let mut mint_post_amount = 0_u64;
+    let mut mint_pre_amount = 0_u64;
+    let mut sol_post_amount = 0_u64;
+    let mut sol_pre_amount = 0_u64;
+    let mut dirs = "".to_string();
+    println!("ray");
+
+    if let Some(meta) = transaction.meta.clone() {
+        for pre_token_balance in meta.pre_token_balances.iter() {
+            if pre_token_balance.owner.clone() == target.to_string()
+                && pre_token_balance.mint.clone()
+                    != "So11111111111111111111111111111111111111112".to_string()
+            {
+                mint = pre_token_balance.mint.clone();
+                let mint_pre_amount_str = match pre_token_balance.ui_token_amount.clone() {
+                    Some(data) => data.amount,
+                    None => "0".to_string(),
+                };
+                mint_pre_amount = mint_pre_amount_str.parse::<u64>().unwrap();
+            }
+            if pre_token_balance.owner.clone() == target.to_string()
+                && pre_token_balance.mint.clone()
+                    == "So11111111111111111111111111111111111111112".to_string()
+            {
+                let sol_pre_amount_str = match pre_token_balance.ui_token_amount.clone() {
+                    Some(data) => data.amount,
+                    None => "0".to_string(),
+                };
+                sol_pre_amount = sol_pre_amount_str.parse::<u64>().unwrap();
+            }
+        }
+        for post_token_balance in meta.post_token_balances.iter() {
+            if post_token_balance.owner.clone() == target.to_string()
+                && post_token_balance.mint.clone()
+                    != "So11111111111111111111111111111111111111112".to_string()
+            {
+                mint = post_token_balance.mint.clone();
+                let mint_post_amount_str = match post_token_balance.ui_token_amount.clone() {
+                    Some(data) => data.amount,
+                    None => "0".to_string(),
+                };
+                mint_post_amount = mint_post_amount_str.parse::<u64>().unwrap();
+            }
+            if post_token_balance.owner.clone() == target.to_string()
+                && post_token_balance.mint.clone()
+                    == "So11111111111111111111111111111111111111112".to_string()
+            {
+                let sol_post_amount_str = match post_token_balance.ui_token_amount.clone() {
+                    Some(data) => data.amount,
+                    None => "0".to_string(),
+                };
+                sol_post_amount = sol_post_amount_str.parse::<u64>().unwrap();
+            }
+        }
+
+        if mint_pre_amount < mint_post_amount {
+            dirs = "buy".to_string();
+            amount_in = (sol_post_amount - sol_pre_amount) as f64;
+            println!(
+                "dirs: {:#?}, amount_in: {:#?}, mint: {:#?}",
+                dirs, amount_in, mint
+            );
+        } else {
+            dirs = "sell".to_string();
+            amount_in = (mint_pre_amount - mint_post_amount) as f64;
+            println!(
+                "dirs: {:#?}, amount_in: {:#?}, mint: {:#?}",
+                dirs, amount_in, mint
+            );
+        }
+    }
+}
