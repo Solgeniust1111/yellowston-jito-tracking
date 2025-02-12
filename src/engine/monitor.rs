@@ -145,7 +145,7 @@ pub async fn tx_pump(transaction: SubscribeUpdateTransactionInfo, target: Pubkey
     let mut dirs = "".to_string();
     let mut bonding_curve = "".to_string();
 
-    println!("punp");
+    println!("pump");
     if let Some(meta) = transaction.meta.clone() {
         for pre_token_balance in meta.pre_token_balances.iter() {
             if pre_token_balance.owner.clone() == target.to_string() {
