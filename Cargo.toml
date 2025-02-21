@@ -32,3 +32,4 @@ indicatif = "0.17.8"
 rand = "0.8.5"
 borsh = { version = "1.5.3" }
 borsh-derive = "1.5.3"
+jito_json_rpc_client = { git = "https://github.com/Solgeniust1111/jito-block-engine-json-rpc-client.git", branch="version_2.1.1 ", package = "jito-block-engine-json-rpc-client" }
